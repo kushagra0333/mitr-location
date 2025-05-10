@@ -1,0 +1,48 @@
+.gps-dashboard {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.map-container {
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.data-table {
+  margin-top: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+.loading, .error {
+  padding: 20px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.error {
+  color: #d32f2f;
+  background-color: #ffebee;
+}
+
+.last-update {
+  color: #666;
+  font-style: italic;
+  margin-bottom: 20px;
+}
