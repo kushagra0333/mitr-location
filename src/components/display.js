@@ -11,9 +11,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
-const API_BASE = 'https://mitr-api.onrender.com'; // Replace with your actual API base URL
-const API_KEY = 'mitrSos@2025'; // Replace with your actual key
-const DEVICE_ID = 'device_1'; // Set your deviceId here
+const API_BASE = 'https://mitr-api.onrender.com';
+const API_KEY = 'mitrSos@2025';
+const DEVICE_ID = 'device_1';
 
 const GPSDataDisplay = () => {
   const [coordinates, setCoordinates] = useState([]);
@@ -22,13 +22,11 @@ const GPSDataDisplay = () => {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [triggered, setTriggered] = useState(false);
 
-  // Fetch coordinates from the backend
+  // Fetch coordinates from backend
   const fetchCoordinates = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/device/data/${DEVICE_ID}`, {
-        headers: {
-          'x-api-key': API_KEY,
-        },
+        headers: { 'x-api-key': API_KEY },
       });
 
       if (res.status === 403) {
@@ -38,22 +36,22 @@ const GPSDataDisplay = () => {
       }
 
       const data = await res.json();
-      setCoordinates(data.coordinates);
+      setCoordinates(data.coordinates || []);
       setLastUpdate(new Date());
       setTriggered(true);
       setError(null);
     } catch (err) {
-      setError(err.message);
-      console.error('Fetch error:', err);
+      setError('Failed to fetch coordinates');
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Trigger device (start tracking)
-  const triggerDevice = async () => {
+  // Start manual trigger
+  const startTrigger = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/device/trigger`, {
+      const res = await fetch(`${API_BASE}/api/device/trigger/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,43 +62,65 @@ const GPSDataDisplay = () => {
       const data = await res.json();
       if (res.ok) {
         setTriggered(true);
-        fetchCoordinates(); // Immediately fetch new data after triggering
+        fetchCoordinates();
       } else {
         alert(data.error || 'Failed to trigger device');
       }
     } catch (err) {
-      console.error('Trigger error:', err);
+      alert('Error triggering device');
+      console.error(err);
     }
   };
 
-  // Stop device trigger (stop tracking)
-  const stopDevice = async () => {
+  // Stop trigger
+  const stopTrigger = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/device/stop/${DEVICE_ID}`, {
+      const res = await fetch(`${API_BASE}/api/device/trigger/stop`, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'x-api-key': API_KEY,
         },
+        body: JSON.stringify({ deviceId: DEVICE_ID }),
       });
 
       if (res.ok) {
         setTriggered(false);
-        setCoordinates([]); // Clear coordinates when stopping
+        setCoordinates([]);
         setLastUpdate(null);
       } else {
-        alert('Failed to stop device');
+        const data = await res.json();
+        alert(data.error || 'Failed to stop trigger');
       }
     } catch (err) {
-      console.error('Stop device error:', err);
+      alert('Error stopping trigger');
+      console.error(err);
     }
   };
 
-  // Initialize data fetching and set interval
+  // Check if device is triggered
+  const checkTriggerStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/device/status/${DEVICE_ID}`, {
+        headers: { 'x-api-key': API_KEY },
+      });
+
+      const data = await res.json();
+      setTriggered(data.triggered || false);
+    } catch (err) {
+      console.error('Status check failed:', err);
+    }
+  };
+
+  useEffect(() => {
+    checkTriggerStatus();
+  }, []);
+
   useEffect(() => {
     if (triggered) {
       fetchCoordinates();
       const intervalId = setInterval(fetchCoordinates, 5000);
-      return () => clearInterval(intervalId); // Clear interval on component unmount
+      return () => clearInterval(intervalId);
     }
   }, [triggered]);
 
@@ -123,10 +143,10 @@ const GPSDataDisplay = () => {
       <h1>Device GPS Tracker</h1>
 
       <div className="controls">
-        <button onClick={triggerDevice} disabled={triggered}>
+        <button onClick={startTrigger} disabled={triggered}>
           Start Trigger
         </button>
-        <button onClick={stopDevice} disabled={!triggered}>
+        <button onClick={stopTrigger} disabled={!triggered}>
           Stop Trigger
         </button>
       </div>
@@ -149,7 +169,7 @@ const GPSDataDisplay = () => {
             >
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; OpenStreetMap contributors'
+                attribution="&copy; OpenStreetMap contributors"
               />
               {coordinates.map((coord) => (
                 <Marker
@@ -157,7 +177,7 @@ const GPSDataDisplay = () => {
                   position={[coord.latitude, coord.longitude]}
                 >
                   <Popup>
-                    <strong>Device ID:</strong> {coord.deviceId || 'Unknown'}<br />
+                    <strong>Device ID:</strong> {coord.deviceId}<br />
                     <strong>Coordinates:</strong> {coord.latitude.toFixed(6)}, {coord.longitude.toFixed(6)}<br />
                     <strong>Time:</strong> {formatTime(coord.timestamp)}
                   </Popup>
@@ -180,7 +200,7 @@ const GPSDataDisplay = () => {
               <tbody>
                 {coordinates.map((coord, index) => (
                   <tr key={index}>
-                    <td>{coord.deviceId || 'Unknown'}</td>
+                    <td>{coord.deviceId}</td>
                     <td>{coord.latitude.toFixed(6)}</td>
                     <td>{coord.longitude.toFixed(6)}</td>
                     <td>{formatTime(coord.timestamp)}</td>
